@@ -4,23 +4,33 @@ import org.bukkit.Location;
 
 public class Waypoint
 {
-    public String ownerName, waypointName, worldName;
-    int x, y, z;
+  public String ownerName, waypointName, worldName;
+  int x, y, z;
+  boolean isPublic;
 
-    public Waypoint(Location location, String ownerName, String waypointName)
-    {
-        this.ownerName = ownerName;
-        this.waypointName = waypointName;
-        this.worldName = location.getWorld().getName();
+  public Waypoint(Location location, String ownerName, String waypointName)
+  {
+    this(location, ownerName, waypointName, false);
+  }
 
-        x = location.getBlockX();
-        y = location.getBlockY();
-        z = location.getBlockZ();
-    }
+  public Waypoint(Location location, String ownerName, String waypointName,
+                  Boolean isPublic)
+  {
+    this.ownerName = ownerName;
+    this.waypointName = waypointName;
+    this.worldName = location.getWorld().getName();
 
-    @Override
-    public String toString()
-    {
-        return waypointName + ": " + "(" + x + ", " + y + ", " + z + ")";
-    }
+    x = location.getBlockX();
+    y = location.getBlockY();
+    z = location.getBlockZ();
+
+    this.isPublic = isPublic;
+  }
+
+  @Override
+  public String toString()
+  {
+    return waypointName + " ( " + worldName + " )" + ": " + "(" + x + ", " +
+        y + ", " + z + ")";
+  }
 }

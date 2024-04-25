@@ -13,103 +13,121 @@ import java.util.stream.Collectors;
 
 public class WaypointManager
 {
-    static final String WaypointsFileName = "waypoints.json";
-    static private File dataFolder;
-    static private ArrayList<Waypoint> waypoints = new ArrayList<>();
+  static final String WaypointsFileName = "waypoints.json";
+  static private File dataFolder;
+  static private ArrayList<Waypoint> waypoints = new ArrayList<>();
 
-    public static void initializeDataFolder(File dataFolder)
+  public static void initializeDataFolder(File dataFolder)
+  {
+    WaypointManager.dataFolder = dataFolder;
+    readWaypoints();
+  }
+
+  public static Waypoint getWaypoint(String playerName,
+                                     String waypointName) throws
+      WaypointNotFoundException
+  {
+    for (Waypoint waypoint : waypoints)
     {
-        WaypointManager.dataFolder = dataFolder;
-        readWaypoints();
+      if (waypoint.ownerName.equals(playerName) &&
+          waypoint.waypointName.equals(waypointName))
+      {
+        return waypoint;
+      }
     }
 
-    public static Waypoint getWaypoint(String playerName, String waypointName)
+    throw new WaypointNotFoundException();
+  }
+
+  public static ArrayList<Waypoint> getUserWaypoints(String userName)
+  {
+    return waypoints.stream()
+        .filter(waypoint -> waypoint.ownerName.equals(userName))
+        .collect(Collectors.toCollection(ArrayList::new));
+  }
+
+  public static ArrayList<Waypoint> getPublicWaypoints()
+  {
+    return waypoints.stream()
+        .filter(waypoint -> waypoint.isPublic)
+        .collect(Collectors.toCollection(ArrayList::new));
+  }
+
+  public static void addWaypoint(Waypoint waypoint) throws
+      WaypointNameExistsException
+  {
+    try
     {
-        for (Waypoint waypoint : waypoints)
-        {
-            if (waypoint.ownerName.equals(playerName) &&
-                    waypoint.waypointName.equals(waypointName))
-            {
-                return waypoint;
-            }
-        }
-        return null;
-    }
-
-    public static ArrayList<String> getUserWaypointNames(String userName)
+      getWaypoint(waypoint.ownerName, waypoint.waypointName);
+    } catch (WaypointNotFoundException e)
     {
-        return waypoints.stream()
-                .filter(waypoint -> waypoint.ownerName.equals(userName))
-                .map(waypoint -> waypoint.waypointName)
-                .collect(Collectors.toCollection(ArrayList::new));
+      waypoints.add(waypoint);
+      writeWaypoints();
+      return;
     }
+    throw new WaypointNameExistsException();
+  }
 
-    public static boolean addWaypoint(Waypoint waypoint)
+  public static void renameWaypoint(String owner, String oldName,
+                                    String newName) throws
+      WaypointNotFoundException, WaypointNameExistsException
+  {
+    try
     {
-        if (waypoint == null)
-        {
-            return false;
-        }
-
-        waypoints.add(waypoint);
-        writeWaypoints();
-        return true;
-    }
-
-    public static boolean renameWaypoint(String owner, String oldName,
-                                         String newName)
+      getWaypoint(owner, newName);
+    } catch (WaypointNotFoundException e)
     {
-        Waypoint waypoint = getWaypoint(owner, oldName);
-        if (waypoint == null)
-        {
-            return false;
-        }
-        waypoint.waypointName = newName;
-        writeWaypoints();
-        return true;
+      getWaypoint(owner, oldName).waypointName = newName;
+      writeWaypoints();
+      return;
     }
+    throw new WaypointNameExistsException();
+  }
 
-    public static boolean removeWaypoint(String owner, String name)
+  public static void setWaypointIsPublic(String owner, String waypointName,
+                                         boolean isPublic) throws
+      WaypointNotFoundException
+  {
+    getWaypoint(owner, waypointName).isPublic = isPublic;
+    writeWaypoints();
+  }
+
+  public static void removeWaypoint(String owner, String name) throws
+      WaypointNotFoundException
+  {
+    waypoints.remove(getWaypoint(owner, name));
+    writeWaypoints();
+  }
+
+  private static void readWaypoints()
+  {
+    try
     {
-        Waypoint waypoint = getWaypoint(owner, name);
-        if (waypoint == null || !waypoints.remove(waypoint))
-        {
-            return false;
-        }
-
-        writeWaypoints();
-        return true;
-    }
-
-    private static void readWaypoints()
+      Gson gson = new Gson();
+      FileReader reader =
+          new FileReader(dataFolder + "/" + WaypointsFileName);
+      waypoints = gson.fromJson(reader, new TypeToken<List<Waypoint>>()
+      {
+      }.getType());
+      reader.close();
+    } catch (IOException e)
     {
-        try
-        {
-            Gson gson = new Gson();
-            FileReader reader =
-                    new FileReader(dataFolder + "/" + WaypointsFileName);
-            waypoints = gson.fromJson(reader, new TypeToken<List<Waypoint>>()
-            {
-            }.getType());
-            reader.close();
-        } catch (IOException e)
-        {
-            e.printStackTrace();
-        }
+      e.printStackTrace();
     }
+  }
 
-    private static void writeWaypoints()
+  private static void writeWaypoints()
+  {
+    try
     {
-        try
-        {
-            Gson gson = new Gson();
-            FileWriter writer =
-                    new FileWriter(dataFolder + "/" + WaypointsFileName);
-            gson.toJson(waypoints, writer);
-            writer.close();
-        } catch (IOException e)
-        {
-            e.printStackTrace();
-        }
+      Gson gson = new Gson();
+      FileWriter writer =
+          new FileWriter(dataFolder + "/" + WaypointsFileName);
+      gson.toJson(waypoints, writer);
+      writer.close();
+    } catch (IOException e)
+    {
+      e.printStackTrace();
     }
+  }
 }

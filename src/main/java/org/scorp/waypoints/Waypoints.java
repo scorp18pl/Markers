@@ -4,21 +4,21 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public class Waypoints extends JavaPlugin
 {
-    @Override
-    public void onEnable()
+  @Override
+  public void onEnable()
+  {
+    if (!getDataFolder().exists())
     {
-        if (!getDataFolder().exists())
-        {
-            getDataFolder().mkdir();
-        }
-
-        WaypointManager.initializeDataFolder(getDataFolder());
-
-        getCommand("waypoint").setExecutor(new WaypointCommand());
+      getDataFolder().mkdir();
     }
 
-    @Override
-    public void onDisable()
-    {
-    }
+    WaypointManager.initializeDataFolder(getDataFolder());
+
+    getCommand("waypoint").setExecutor(new WaypointCommand());
+  }
+
+  @Override
+  public void onDisable()
+  {
+  }
 }

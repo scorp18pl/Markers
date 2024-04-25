@@ -6,17 +6,19 @@ author: scorp
 commands:
     waypoint:
         description: Waypoint commands
-        usage: /waypoint <create|rename|delete|list> [args]
-        aliases: [wp]
+        usage: /waypoint <create / rename / delete / list> [args]
         permission: waypoints.command
         permission-message: You do not have permission to use this command
         subcommands:
         create:
             description: Create a new waypoint at your current location
-            usage: /waypoint create <waypoint_name>
+            usage: /waypoint create <waypoint_name> <private / public>
         rename:
             description: Rename a waypoint
             usage: /waypoint rename <old_waypoint_name> <new_waypoint_name>
+        set_type:
+            description: Change waypoint type
+            usage: /waypoint set_type <waypoint_name> <private / public>
         delete:
             description: Delete a waypoint
             usage: /waypoint delete <waypoint_name>
