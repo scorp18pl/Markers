@@ -1,0 +1,32 @@
+name: Waypoints
+version: '${project.version}'
+main: org.scorp.waypoints.Waypoints
+api-version: '1.20'
+author: scorp
+commands:
+    waypoint:
+        description: Waypoint commands
+        usage: /waypoint <create|rename|delete|list> [args]
+        aliases: [wp]
+        permission: waypoints.command
+        permission-message: You do not have permission to use this command
+        subcommands:
+        create:
+            description: Create a new waypoint at your current location
+            usage: /waypoint create <waypoint_name>
+        rename:
+            description: Rename a waypoint
+            usage: /waypoint rename <old_waypoint_name> <new_waypoint_name>
+        delete:
+            description: Delete a waypoint
+            usage: /waypoint delete <waypoint_name>
+        coords:
+          description: Get the coordinates of a specified waypoint
+          usage: /waypoint coords <waypoint_name>
+        list:
+            description: List all waypoints
+            usage: /waypoint list
+permissions:
+  waypoints.command:
+    description: Allows access to all waypoint commands
+    default: true
