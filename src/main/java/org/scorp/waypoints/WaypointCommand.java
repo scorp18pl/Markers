@@ -55,7 +55,7 @@ public class WaypointCommand implements CommandExecutor, TabExecutor
           (validateSubcommandCall("add", 2, args) &&
               (args[2].equals("private") || args[2].equals("public"))))
       {
-        Boolean isPublic = (args.length == 3 && args[2].equals("public"));
+        Boolean isPublic = args.length == 2 || args[2].equals("public");
         WaypointManager.addWaypoint(
             new Waypoint(player.getLocation(), playerName, args[1], isPublic));
 
@@ -70,7 +70,7 @@ public class WaypointCommand implements CommandExecutor, TabExecutor
       } else if (validateSubcommandCall("coords", 1, args))
       {
         player.sendMessage(
-            WaypointManager.getWaypoint(playerName, args[1]).toString());
+            WaypointManager.getWaypoint(playerName, args[1]).toMcString());
       } else if (validateSubcommandCall("rename", 2, args))
       {
         WaypointManager.renameWaypoint(playerName, args[1], args[2]);
@@ -158,7 +158,7 @@ public class WaypointCommand implements CommandExecutor, TabExecutor
     }
 
     if ((args.length > 0) && (args[0].equals("add") && args.length == 3) ||
-        (args[0].equals("set_type") && args.length == 2))
+        (args[0].equals("set_type") && args.length == 3))
     {
       return Arrays.asList("private", "public");
     }

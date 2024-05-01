@@ -1,5 +1,6 @@
 package org.scorp.waypoints;
 
+import com.bethecoder.ascii_table.ASCIITable;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
@@ -8,19 +9,34 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
+
+import static org.bukkit.Bukkit.getLogger;
 
 public class WaypointManager
 {
   static final String WaypointsFileName = "waypoints.json";
   static private File dataFolder;
+
+  static private boolean requiresDiscordUpdate = false;
+  static private String host = "localhost";
+  static private int port = 8888;
+
   static private ArrayList<Waypoint> waypoints = new ArrayList<>();
 
   public static void initializeDataFolder(File dataFolder)
   {
     WaypointManager.dataFolder = dataFolder;
     readWaypoints();
+  }
+
+  public static void initializeSocketAddress(String host, int port)
+  {
+    WaypointManager.host = host;
+    WaypointManager.port = port;
   }
 
   public static Waypoint getWaypoint(String playerName,
@@ -48,8 +64,7 @@ public class WaypointManager
 
   public static ArrayList<Waypoint> getPublicWaypoints()
   {
-    return waypoints.stream()
-        .filter(waypoint -> waypoint.isPublic)
+    return waypoints.stream().filter(waypoint -> waypoint.isPublic)
         .collect(Collectors.toCollection(ArrayList::new));
   }
 
@@ -63,6 +78,7 @@ public class WaypointManager
     {
       waypoints.add(waypoint);
       writeWaypoints();
+      updateRequiresDiscordUpdate(waypoint.isPublic);
       return;
     }
     throw new WaypointNameExistsException();
@@ -77,8 +93,10 @@ public class WaypointManager
       getWaypoint(owner, newName);
     } catch (WaypointNotFoundException e)
     {
-      getWaypoint(owner, oldName).waypointName = newName;
+      Waypoint waypoint = getWaypoint(owner, oldName);
+      waypoint.waypointName = newName;
       writeWaypoints();
+      updateRequiresDiscordUpdate(waypoint.isPublic);
       return;
     }
     throw new WaypointNameExistsException();
@@ -88,15 +106,33 @@ public class WaypointManager
                                          boolean isPublic) throws
       WaypointNotFoundException
   {
-    getWaypoint(owner, waypointName).isPublic = isPublic;
+    Waypoint waypoint = getWaypoint(owner, waypointName);
+
+    boolean requiresUpdate = waypoint.isPublic == isPublic;
+    waypoint.isPublic = isPublic;
     writeWaypoints();
+    updateRequiresDiscordUpdate(requiresUpdate);
   }
 
   public static void removeWaypoint(String owner, String name) throws
       WaypointNotFoundException
   {
-    waypoints.remove(getWaypoint(owner, name));
+    Waypoint waypoint = getWaypoint(owner, name);
+    boolean isPublic = waypoint.isPublic;
+    waypoints.remove(waypoint);
     writeWaypoints();
+    updateRequiresDiscordUpdate(isPublic);
+  }
+
+  public static void onTimeElapsed()
+  {
+    if (!requiresDiscordUpdate)
+    {
+      return;
+    }
+
+    requiresDiscordUpdate = false;
+    Utils.sendTCPMessage(host, port, getDiscordMessage());
   }
 
   private static void readWaypoints()
@@ -104,8 +140,7 @@ public class WaypointManager
     try
     {
       Gson gson = new Gson();
-      FileReader reader =
-          new FileReader(dataFolder + "/" + WaypointsFileName);
+      FileReader reader = new FileReader(dataFolder + "/" + WaypointsFileName);
       waypoints = gson.fromJson(reader, new TypeToken<List<Waypoint>>()
       {
       }.getType());
@@ -121,13 +156,56 @@ public class WaypointManager
     try
     {
       Gson gson = new Gson();
-      FileWriter writer =
-          new FileWriter(dataFolder + "/" + WaypointsFileName);
+      FileWriter writer = new FileWriter(dataFolder + "/" + WaypointsFileName);
       gson.toJson(waypoints, writer);
       writer.close();
     } catch (IOException e)
     {
       e.printStackTrace();
     }
+  }
+
+  private static void updateRequiresDiscordUpdate(boolean condition)
+  {
+    requiresDiscordUpdate = requiresDiscordUpdate || condition;
+  }
+
+  private static String getDiscordMessage()
+  {
+    ArrayList<Waypoint> publicWaypoints = getPublicWaypoints();
+    if (publicWaypoints.size() == 0)
+    {
+      return "No publicly shared waypoints available.";
+    }
+
+    String tableName =
+        "Publicly shared waypoints" + "(updated: " + Utils.getDateString() +
+            ")\n";
+    String[] tableHeaders = {"Owner", "Name", "world", "(x, y, z)"};
+    String[][] tableData = publicWaypoints.stream().sorted().map(
+            (waypoint) -> new String[]{waypoint.ownerName, waypoint.waypointName,
+                waypoint.worldName,
+                "(" + waypoint.x + ", " + waypoint.y + ", " + waypoint.z + ")"})
+        .collect(Collectors.toCollection(ArrayList::new))
+        .toArray(new String[0][0]);
+
+    String lastOwner, lastWorld;
+    lastWorld = lastOwner = "";
+    for (String[] entry : tableData)
+    {
+      String owner = entry[0];
+      String world = entry[2];
+      if (owner.equals(lastOwner)) {
+        entry[0] = "";
+      }
+      if (world.equals(lastWorld)) {
+        entry[2] = "";
+      }
+
+      lastOwner = owner;
+      lastWorld = world;
+    }
+
+    return tableName + ASCIITable.getInstance().getTable(tableHeaders, tableData);
   }
 }

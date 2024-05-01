@@ -114,3 +114,5 @@ run/
 
 # Misc
 deploy.sh
+src/main/resources/config.yml
+lib/
