@@ -39,12 +39,14 @@ public class Waypoint implements
 
   public String toMcString()
   {
-    return ChatColor.YELLOW + waypointName + ChatColor.WHITE + " ( " +
-        ChatColor.YELLOW + worldName + ChatColor.WHITE + " )" + ": " + "(" +
+    return ChatColor.BOLD + "" + ChatColor.YELLOW + waypointName +
+        ChatColor.RESET + " ( " +
+        ChatColor.BOLD + "" + ChatColor.YELLOW + worldName + ChatColor.RESET +
+        " )" + ": " + "(" +
         ChatColor.RED + x + ChatColor.WHITE +
         ", " +
         ChatColor.GREEN + y + ChatColor.WHITE + ", " + ChatColor.AQUA + z +
-        ChatColor.WHITE + ")";
+        ChatColor.RESET + ")";
   }
 
   @Override

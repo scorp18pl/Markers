@@ -55,6 +55,36 @@ public class WaypointManager
     throw new WaypointNotFoundException();
   }
 
+  public static Waypoint getVisibleWaypoint(String username,
+                                           String waypointName) throws
+      WaypointNotFoundException
+  {
+    // Prioritize user waypoints
+    try
+    {
+      return getWaypoint(username, waypointName);
+    } catch (WaypointNotFoundException exception)
+    {
+      ArrayList<Waypoint> publicWaypoints = getPublicWaypoints();
+      for (Waypoint waypoint : publicWaypoints)
+      {
+        if (waypoint.waypointName.equals(waypointName))
+        {
+          return waypoint;
+        }
+      }
+
+      throw new WaypointNotFoundException();
+    }
+  }
+
+  public static ArrayList<Waypoint> getVisibleWaypoints(String username)
+  {
+    return waypoints.stream().filter(
+            waypoint -> waypoint.ownerName.equals(username) || waypoint.isPublic)
+        .collect(Collectors.toCollection(ArrayList::new));
+  }
+
   public static ArrayList<Waypoint> getUserWaypoints(String userName)
   {
     return waypoints.stream()
@@ -195,10 +225,12 @@ public class WaypointManager
     {
       String owner = entry[0];
       String world = entry[2];
-      if (owner.equals(lastOwner)) {
+      if (owner.equals(lastOwner))
+      {
         entry[0] = "";
       }
-      if (world.equals(lastWorld)) {
+      if (world.equals(lastWorld))
+      {
         entry[2] = "";
       }
 
@@ -206,6 +238,7 @@ public class WaypointManager
       lastWorld = world;
     }
 
-    return tableName + ASCIITable.getInstance().getTable(tableHeaders, tableData);
+    return tableName +
+        ASCIITable.getInstance().getTable(tableHeaders, tableData);
   }
 }

@@ -1,5 +1,6 @@
 package org.scorp.waypoints;
 
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -45,12 +46,21 @@ public class WaypointCommand implements CommandExecutor, TabExecutor
             WaypointManager.getPublicWaypoints());
 
         String message =
-            ChatColor.YELLOW + "Your waypoints: " +
-                ChatColor.WHITE + String.join(", ", userWaypointNames) +
-                ChatColor.AQUA + "\nPublic waypoints: " +
-                ChatColor.WHITE + String.join(",", publicWaypointNames) + ".";
+            ChatColor.BOLD + "" + ChatColor.YELLOW + "Your waypoints: " +
+                ChatColor.RESET + String.join(", ", userWaypointNames) +
+                ChatColor.BOLD + "" + ChatColor.YELLOW +
+                "\nPublic waypoints: " + ChatColor.RESET +
+                String.join(", ", publicWaypointNames) + ".";
 
         player.sendMessage(message);
+      } else if (validateSubcommandCall("share", 0, args))
+      {
+        String waypointName = "current_location";
+        Waypoint waypoint =
+            new Waypoint(player.getLocation(), playerName, waypointName);
+        Bukkit.broadcastMessage(
+            ChatColor.YELLOW + playerName + "'s " + ChatColor.RESET +
+                waypoint.toMcString());
       } else if (validateSubcommandCall("add", 1, args) ||
           (validateSubcommandCall("add", 2, args) &&
               (args[2].equals("private") || args[2].equals("public"))))
@@ -59,10 +69,8 @@ public class WaypointCommand implements CommandExecutor, TabExecutor
         WaypointManager.addWaypoint(
             new Waypoint(player.getLocation(), playerName, args[1], isPublic));
 
-        player.sendMessage(
-            ChatColor.GREEN + "Successfully added a " +
-                (isPublic ? "public" : "private") +
-                " waypoint.");
+        player.sendMessage(ChatColor.GREEN + "Successfully added a " +
+            (isPublic ? "public" : "private") + " waypoint.");
 
       } else if (validateSubcommandCall("remove", 1, args))
       {
@@ -70,25 +78,26 @@ public class WaypointCommand implements CommandExecutor, TabExecutor
       } else if (validateSubcommandCall("coords", 1, args))
       {
         player.sendMessage(
-            WaypointManager.getWaypoint(playerName, args[1]).toMcString());
+            WaypointManager.getVisibleWaypoint(playerName, args[1])
+                .toMcString());
       } else if (validateSubcommandCall("rename", 2, args))
       {
         WaypointManager.renameWaypoint(playerName, args[1], args[2]);
 
-        player.sendMessage(
-            ChatColor.GREEN + "Successfully renamed a " +
-                (WaypointManager.getWaypoint(playerName, args[2]).isPublic ? "public" : "private") +
-                " waypoint from " + args[1] + " to " + args[2]);
+        player.sendMessage(ChatColor.GREEN + "Successfully renamed a " +
+            (WaypointManager.getWaypoint(playerName, args[2]).isPublic ?
+                "public" : "private") + " waypoint from " + args[1] + " to " +
+            args[2]);
       } else if (validateSubcommandCall("set_type", 2, args) &&
           (args[2].equals("private") || args[2].equals("public")))
       {
         WaypointManager.setWaypointIsPublic(playerName, args[1],
             args[2].equals("public"));
 
-        player.sendMessage(
-            ChatColor.GREEN + "Successfully changed type of a " +
-                (WaypointManager.getWaypoint(playerName, args[2]).isPublic ? "public" : "private") +
-                " waypoint from " + args[1] + " to " + args[2]);
+        player.sendMessage(ChatColor.GREEN + "Successfully changed type of a " +
+            (WaypointManager.getWaypoint(playerName, args[2]).isPublic ?
+                "public" : "private") + " waypoint from " + args[1] + " to " +
+            args[2]);
       } else
       {
         return false;
@@ -97,7 +106,8 @@ public class WaypointCommand implements CommandExecutor, TabExecutor
 
     } catch (WaypointNotFoundException e)
     {
-      player.sendMessage(ChatColor.RED + "No waypoint with name " + args[1] + ".");
+      player.sendMessage(
+          ChatColor.RED + "No waypoint with name " + args[1] + ".");
       return true;
     } catch (WaypointNameExistsException e)
     {
@@ -133,16 +143,19 @@ public class WaypointCommand implements CommandExecutor, TabExecutor
     if (args.length == 1)
     {
       return Arrays.asList("add", "rename", "remove", "list", "coords",
-          "set_type");
+          "set_type", "share");
     }
 
     if (args.length == 2)
     {
-      if (args[0].equals("rename") || args[0].equals("remove") ||
-          args[0].equals("coords"))
+      if (args[0].equals("rename") || args[0].equals("remove"))
       {
         return Utils.WaypointListToStringlist(
             WaypointManager.getUserWaypoints(sender.getName()));
+      } else if (args[0].equals("coords"))
+      {
+        return Utils.WaypointListToStringlist(
+            WaypointManager.getVisibleWaypoints(sender.getName()));
       } else if (args[0].equals("add"))
       {
         return List.of("waypointName");
@@ -168,7 +181,8 @@ public class WaypointCommand implements CommandExecutor, TabExecutor
 
   private static boolean isNameValid(String name)
   {
-    final Pattern pattern = Pattern.compile("^[a-zA-z]+[a-zA-z0-9]*$");
+    final Pattern pattern =
+        Pattern.compile("^[a-zA-z]+[a-zA-z0-9\\p{L}]{2,16}$");
     Matcher matcher = pattern.matcher(name);
     return matcher.matches();
   }
