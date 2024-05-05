@@ -1,4 +1,4 @@
-package org.scorp.waypoints;
+package org.scorp.waypoints.Waypoint;
 
 import org.bukkit.Location;
 import org.bukkit.ChatColor;
@@ -28,6 +28,11 @@ public class Waypoint implements
     z = location.getBlockZ();
 
     this.isPublic = isPublic;
+  }
+
+  public boolean isPublic()
+  {
+    return isPublic;
   }
 
   @Override

@@ -1,8 +1,10 @@
-package org.scorp.waypoints;
+package org.scorp.waypoints.Waypoint;
 
 import com.bethecoder.ascii_table.ASCIITable;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import org.bukkit.Bukkit;
+import org.scorp.waypoints.Utils;
 
 import java.io.File;
 import java.io.FileReader;
@@ -11,10 +13,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
-
-import static org.bukkit.Bukkit.getLogger;
 
 public class WaypointManager
 {
@@ -52,11 +51,11 @@ public class WaypointManager
       }
     }
 
-    throw new WaypointNotFoundException();
+    throw new WaypointNotFoundException(waypointName);
   }
 
   public static Waypoint getVisibleWaypoint(String username,
-                                           String waypointName) throws
+                                            String waypointName) throws
       WaypointNotFoundException
   {
     // Prioritize user waypoints
@@ -74,7 +73,7 @@ public class WaypointManager
         }
       }
 
-      throw new WaypointNotFoundException();
+      throw new WaypointNotFoundException(waypointName);
     }
   }
 
@@ -111,7 +110,7 @@ public class WaypointManager
       updateRequiresDiscordUpdate(waypoint.isPublic);
       return;
     }
-    throw new WaypointNameExistsException();
+    throw new WaypointNameExistsException(waypoint.waypointName);
   }
 
   public static void renameWaypoint(String owner, String oldName,
@@ -129,7 +128,7 @@ public class WaypointManager
       updateRequiresDiscordUpdate(waypoint.isPublic);
       return;
     }
-    throw new WaypointNameExistsException();
+    throw new WaypointNameExistsException(newName);
   }
 
   public static void setWaypointIsPublic(String owner, String waypointName,

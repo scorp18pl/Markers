@@ -1,137 +1,96 @@
 package org.scorp.waypoints;
 
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
-import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import org.scorp.waypoints.Waypoint.WaypointNameExistsException;
+import org.scorp.waypoints.Waypoint.WaypointNotFoundException;
+import org.scorp.waypoints.command.*;
+import org.scorp.waypoints.command.subcommands.*;
+
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class WaypointCommand implements CommandExecutor, TabExecutor
 {
+  static List<SubCommand> subCommands =
+      List.of(new AddSubCommand(), new CoordsSubCommand(), new ListSubCommand(),
+          new RemoveSubCommand(), new RenameSubCommand(),
+          new SetTypeSubCommand(),
+          new ShareSubCommand());
+
+  private static SubCommand getSubCommandWithName(String name)
+  {
+    for (SubCommand sc : subCommands)
+    {
+      if (sc.getName().equals(name))
+      {
+        return sc;
+      }
+    }
+
+    return null;
+  }
+
+  private static String getUsageString(String usageBody)
+  {
+    return "Usage:\n" + usageBody;
+  }
+
   @Override
   public boolean onCommand(@NotNull CommandSender sender,
                            @NotNull Command command, @NotNull String label,
                            @NotNull String[] args)
   {
-    if (!(sender instanceof Player player))
-    {
-      sender.sendMessage("You must be a player to use this command.");
-      return true;
-    }
-
     if (args.length == 0)
     {
       return false;
     }
 
-    final String playerName = player.getName();
+    String subCommandName = args[0];
+    SubCommand subCommand = getSubCommandWithName(subCommandName);
+    int argCount = args.length - 1; // skip subcommand from args
+    if (subCommand == null)
+    {
+      return false;
+    }
+
     try
     {
-      if (validateSubcommandCall("list", 0, args))
+      if (!subCommand.getPossibleArgCounts().contains(argCount))
       {
-        ArrayList<String> userWaypointNames = Utils.WaypointListToStringlist(
-            WaypointManager.getUserWaypoints(playerName));
-
-        ArrayList<String> publicWaypointNames = Utils.WaypointListToStringlist(
-            WaypointManager.getPublicWaypoints());
-
-        String message =
-            ChatColor.BOLD + "" + ChatColor.YELLOW + "Your waypoints: " +
-                ChatColor.RESET + String.join(", ", userWaypointNames) +
-                ChatColor.BOLD + "" + ChatColor.YELLOW +
-                "\nPublic waypoints: " + ChatColor.RESET +
-                String.join(", ", publicWaypointNames) + ".";
-
-        player.sendMessage(message);
-      } else if (validateSubcommandCall("share", 0, args))
-      {
-        String waypointName = "current_location";
-        Waypoint waypoint =
-            new Waypoint(player.getLocation(), playerName, waypointName);
-        Bukkit.broadcastMessage(
-            ChatColor.YELLOW + playerName + "'s " + ChatColor.RESET +
-                waypoint.toMcString());
-      } else if (validateSubcommandCall("add", 1, args) ||
-          (validateSubcommandCall("add", 2, args) &&
-              (args[2].equals("private") || args[2].equals("public"))))
-      {
-        Boolean isPublic = args.length == 2 || args[2].equals("public");
-        WaypointManager.addWaypoint(
-            new Waypoint(player.getLocation(), playerName, args[1], isPublic));
-
-        player.sendMessage(ChatColor.GREEN + "Successfully added a " +
-            (isPublic ? "public" : "private") + " waypoint.");
-
-      } else if (validateSubcommandCall("remove", 1, args))
-      {
-        WaypointManager.removeWaypoint(playerName, args[1]);
-      } else if (validateSubcommandCall("coords", 1, args))
-      {
-        player.sendMessage(
-            WaypointManager.getVisibleWaypoint(playerName, args[1])
-                .toMcString());
-      } else if (validateSubcommandCall("rename", 2, args))
-      {
-        WaypointManager.renameWaypoint(playerName, args[1], args[2]);
-
-        player.sendMessage(ChatColor.GREEN + "Successfully renamed a " +
-            (WaypointManager.getWaypoint(playerName, args[2]).isPublic ?
-                "public" : "private") + " waypoint from " + args[1] + " to " +
-            args[2]);
-      } else if (validateSubcommandCall("set_type", 2, args) &&
-          (args[2].equals("private") || args[2].equals("public")))
-      {
-        WaypointManager.setWaypointIsPublic(playerName, args[1],
-            args[2].equals("public"));
-
-        player.sendMessage(ChatColor.GREEN + "Successfully changed type of a " +
-            (WaypointManager.getWaypoint(playerName, args[2]).isPublic ?
-                "public" : "private") + " waypoint from " + args[1] + " to " +
-            args[2]);
-      } else
-      {
-        return false;
+        throw new InvalidCommandException();
       }
-      return true;
 
-    } catch (WaypointNotFoundException e)
-    {
-      player.sendMessage(
-          ChatColor.RED + "No waypoint with name " + args[1] + ".");
-      return true;
-    } catch (WaypointNameExistsException e)
-    {
-      player.sendMessage(
-          ChatColor.RED + "Waypoint with name " + args[1] + " already exists.");
-      return true;
-    }
-  }
+      String[] subCommandArgs = Arrays.copyOfRange(args, 1, args.length);
 
-  private static boolean validateSubcommandCall(String subcommandName,
-                                                int argCount, String[] args)
-  {
-    if ((args.length == argCount + 1) && args[0].equals(subcommandName))
-    {
-      for (int i = 1; i < args.length; ++i)
+      for (String arg : subCommandArgs)
       {
-        if (!isNameValid(args[i]))
+        if (!CommandUtils.isNameValid(arg))
         {
-          return false;
+          throw new IllegalCharactersException(arg);
         }
       }
-      return true;
+
+      subCommand.onCommand(sender, subCommandArgs);
+    } catch (InvalidCommandException e)
+    {
+      sender.sendMessage(Utils.getErrorString(e.getMessage()));
+      sender.sendMessage(
+          Utils.getInfoString(getUsageString(subCommand.getUsageMessage())));
+    } catch (WaypointNotFoundException | WaypointNameExistsException e)
+    {
+      sender.sendMessage(Utils.getErrorString(e.getMessage()));
     }
-    return false;
+
+    return true;
   }
 
   @Override
@@ -142,48 +101,28 @@ public class WaypointCommand implements CommandExecutor, TabExecutor
   {
     if (args.length == 1)
     {
-      return Arrays.asList("add", "rename", "remove", "list", "coords",
-          "set_type", "share");
+      return subCommands.stream().map(
+              SubCommand::getName)
+          .collect(Collectors.toCollection(ArrayList::new));
     }
 
-    if (args.length == 2)
+    String subCommandName = args[0];
+    SubCommand subCommand = getSubCommandWithName(subCommandName);
+    int argCount = args.length - 1; // skip subcommand from args
+    if (subCommand == null ||
+        subCommand.getPossibleArgCounts().stream()
+            .max(Comparator.naturalOrder()).orElse(0) < argCount
+    )
     {
-      if (args[0].equals("rename") || args[0].equals("remove"))
-      {
-        return Utils.WaypointListToStringlist(
-            WaypointManager.getUserWaypoints(sender.getName()));
-      } else if (args[0].equals("coords"))
-      {
-        return Utils.WaypointListToStringlist(
-            WaypointManager.getVisibleWaypoints(sender.getName()));
-      } else if (args[0].equals("add"))
-      {
-        return List.of("waypointName");
-      }
+      return List.of();
     }
 
-    if (args.length == 3)
+    try
     {
-      if (args[0].equals("rename"))
-      {
-        return List.of("newWaypointName");
-      }
-    }
-
-    if ((args.length > 0) && (args[0].equals("add") && args.length == 3) ||
-        (args[0].equals("set_type") && args.length == 3))
+      return subCommand.onTabComplete(sender, argCount - 1);
+    } catch (PlayerOnlyCommandException e)
     {
-      return Arrays.asList("private", "public");
+      return List.of();
     }
-
-    return new ArrayList<>();
-  }
-
-  private static boolean isNameValid(String name)
-  {
-    final Pattern pattern =
-        Pattern.compile("^[a-zA-z]+[a-zA-z0-9\\p{L}]{2,16}$");
-    Matcher matcher = pattern.matcher(name);
-    return matcher.matches();
   }
 }

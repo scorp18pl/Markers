@@ -1,8 +1,10 @@
 package org.scorp.waypoints;
 
+import org.bukkit.ChatColor;
+import org.scorp.waypoints.Waypoint.Waypoint;
+
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.PrintWriter;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
@@ -13,7 +15,22 @@ import java.util.stream.Collectors;
 
 public class Utils
 {
-  public static ArrayList<String> WaypointListToStringlist(
+  public static String getSuccessString(String text)
+  {
+    return ChatColor.GREEN + text;
+  }
+
+  public static String getInfoString(String text)
+  {
+    return ChatColor.YELLOW + text;
+  }
+
+  public static String getErrorString(String text)
+  {
+    return ChatColor.RED + text;
+  }
+
+  public static ArrayList<String> waypointListToStringlist(
       ArrayList<Waypoint> waypoints)
   {
     return waypoints.stream().map(waypoint -> waypoint.waypointName)

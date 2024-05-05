@@ -3,6 +3,7 @@ package org.scorp.waypoints;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.scorp.waypoints.Waypoint.WaypointManager;
 
 public class Waypoints extends JavaPlugin
 {
